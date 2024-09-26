@@ -56,7 +56,7 @@ def shape_function_wet_top(x, wetted_length, mode):
 
     return (((-1.0178 * math.cos(beta * x) + math.sin(beta * x)
             + 1.0178 * math.cosh(beta * x) - math.sinh(beta * x)))
-            * (wetted_length - x) ** 0.5)
+            * ((wetted_length - x) ** 0.5))
 
 
 # Shape function divided by square root term
@@ -65,7 +65,7 @@ def shape_function_wet_bottom(x, wetted_length, mode_m):
 
     return (((-1.0178 * math.cos(beta * x) + math.sin(beta * x)
             + 1.0178 * math.cosh(beta * x) - math.sinh(beta * x)))
-            * (wetted_length - x) ** -0.5)
+            * ((wetted_length - x) ** -0.5))
 
 
 # ----- Mass equation terms -----
@@ -93,10 +93,11 @@ def added_mass(wetted_length, mode_m, mode_n):
     if wetted_length == 0:
         return 0
     else:
+        power = 1
         integral_one = integrate.quad(shape_function_wet_top, 0, wetted_length, args=(wetted_length, mode_m))[0]
-        integral_two = integrate.quad(shape_function_one, 0, wetted_length, args=(wetted_length, mode_n))[0]
+        integral_two = integrate.quad(shape_function_one, 0, wetted_length, args=(power, mode_n))[0]
 
-        value = density_water * integral_one + integral_two / wetted_length
+        value = (density_water * integral_one) * (integral_two / wetted_length)
 
         return value
 
@@ -106,11 +107,12 @@ def damping(wetted_length, wetted_length_change, mode_m, mode_n):
     if wetted_length == 0:
         return 0
     else:
+        power = 1
         integral_one = integrate.quad(shape_function_wet_bottom, 0, wetted_length, args=(wetted_length, mode_m))[0]
-        integral_two = integrate.quad(shape_function_one, 0, wetted_length, args=(wetted_length, mode_n))[0]
+        integral_two = integrate.quad(shape_function_one, 0, wetted_length, args=(power, mode_n))[0]
 
         value = (density_water * wetted_length * wetted_length_change * integral_one
-                 + integral_two / wetted_length)
+                 * (integral_two / wetted_length))
 
         return value
 
@@ -164,7 +166,6 @@ def matrix_vector_generator(wetted_length, wetted_length_change):
         force_vector[m] = f_m
 
         for n in range(3):
-            mode_m = m + 1
             mode_n = n + 1
 
             a_mn = added_mass(wetted_length, mode_m, mode_n)
@@ -178,8 +179,7 @@ def matrix_vector_generator(wetted_length, wetted_length_change):
     matrix = np.array([[zero_matrix, identity_matrix],
                        [-inverse_mass_matrix.dot(stiffness_matrix), -inverse_mass_matrix.dot(damping_matrix)]])
 
-    vector = np.array([[force_vector],
-                       [-inverse_mass_matrix.dot(force_vector)]])
+    vector = np.array([zero_vector, -inverse_mass_matrix.dot(force_vector)])
 
     return matrix, vector
 
@@ -188,14 +188,17 @@ def matrix_vector_generator(wetted_length, wetted_length_change):
 # Uses dot product to multiply and solve mass equation
 def matrix_vector_multiplication(matrix, vector, input_vector):
 
-    term_one = matrix[0][0].dot(input_vector[0][0])
-    term_two = matrix[0][1].dot(input_vector[1][0])
-    term_three = matrix[1][0].dot(input_vector[0][0])
-    term_four = matrix[1][1].dot(input_vector[1][0])
+    term_one = matrix[0][0].dot(input_vector[0])
+    term_two = matrix[0][1].dot(input_vector[1])
+    term_three = matrix[1][0].dot(input_vector[0])
+    term_four = matrix[1][1].dot(input_vector[1])
 
-    result = term_one + term_two + term_three + term_four + vector
+    combined_term = np.array([term_one + term_two, term_three + term_four])
 
-    return result
+    combined_vector = np.array([combined_term[0] + vector[0],
+                                combined_term[1] + vector[1]])
+
+    return combined_vector
 
 
 # ----- Overall temporal term a(t) calculator -----
@@ -205,8 +208,7 @@ def mode_one_temporal_term(write_file=False):
 
     # Create current guess, starts at [0, 0]
     empty_vector = np.zeros((3, 1))
-    current_guess = np.array([[empty_vector],
-                              [empty_vector]])
+    current_guess = np.array([empty_vector, empty_vector])
 
     # Create an empty list to save future guesses
     guess_1 = []
@@ -257,11 +259,11 @@ def mode_one_temporal_term(write_file=False):
         # Create a new guess {A}_i+1
         new_guess = (current_guess
                      + (c1_vector + 2 * c2_vector + 2 * c3_vector + c4_vector) / 6)
-        print(new_guess[0][0][0])
+
         # Save the guess
-        guess_1.append(float(new_guess[0][0][0]))
-        guess_2.append(float(new_guess[0][0][1]))
-        guess_3.append(float(new_guess[0][0][2]))
+        guess_1.append(float(new_guess[0][0]))
+        guess_2.append(float(new_guess[0][1]))
+        guess_3.append(float(new_guess[0][2]))
 
         # Now calculation has finished, update the current guess before
         # moving on to next iteration in the loop
@@ -280,9 +282,11 @@ def mode_one_temporal_term(write_file=False):
     if write_file:
         # Save guesses to text file
         with open('a_values_multiplemodes.txt', 'w') as f:
-            for n, value in enumerate(guess_1):
+            for n, value_one in enumerate(guess_1):
                 time_point = time_points[n]
-                f.write(f"{value, float(time_point)}\n")
+                value_two = guess_2[n]
+                value_three = guess_3[n]
+                f.write(f"{value_one, value_two, value_three, float(time_point)}\n")
 
 
 mode_one_temporal_term(write_file=True)
