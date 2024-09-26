@@ -73,7 +73,8 @@ def shape_function_wet_bottom(x, wetted_length, mode_m):
 def structural_mass(mode_m):
     power = 2
     value = (density_steel * plate_area *
-             integrate.quad(shape_function_one, 0, plate_length, args=(power, mode_m))[0])
+             integrate.quad(shape_function_one, 0, plate_length,
+                            args=(power, mode_m))[0])
 
     return value
 
@@ -83,7 +84,8 @@ def structural_stiffness(mode_m):
     beta = get_beta(mode_m)
     power = 2
     value = (elasticity_modulus * moment_of_inertia * beta ** 4 *
-             integrate.quad(shape_function_one, 0, plate_length, args=(power, mode_m))[0])
+             integrate.quad(shape_function_one, 0, plate_length,
+                            args=(power, mode_m))[0])
 
     return value
 
@@ -94,8 +96,10 @@ def added_mass(wetted_length, mode_m, mode_n):
         return 0
     else:
         power = 1
-        integral_one = integrate.quad(shape_function_wet_top, 0, wetted_length, args=(wetted_length, mode_m))[0]
-        integral_two = integrate.quad(shape_function_one, 0, wetted_length, args=(power, mode_n))[0]
+        integral_one = integrate.quad(shape_function_wet_top, 0, wetted_length,
+                                      args=(wetted_length, mode_m))[0]
+        integral_two = integrate.quad(shape_function_one, 0, wetted_length,
+                                      args=(power, mode_n))[0]
 
         value = (density_water * integral_one) * (integral_two / wetted_length)
 
@@ -108,10 +112,15 @@ def damping(wetted_length, wetted_length_change, mode_m, mode_n):
         return 0
     else:
         power = 1
-        integral_one = integrate.quad(shape_function_wet_bottom, 0, wetted_length, args=(wetted_length, mode_m))[0]
-        integral_two = integrate.quad(shape_function_one, 0, wetted_length, args=(power, mode_n))[0]
+        integral_one = integrate.quad(shape_function_wet_bottom, 0,
+                                      wetted_length,
+                                      args=(wetted_length, mode_m))[0]
+        integral_two = integrate.quad(shape_function_one, 0,
+                                      wetted_length,
+                                      args=(power, mode_n))[0]
 
-        value = (density_water * wetted_length * wetted_length_change * integral_one
+        value = (density_water * wetted_length * wetted_length_change
+                 * integral_one
                  * (integral_two / wetted_length))
 
         return value
@@ -123,7 +132,9 @@ def force(wetted_length, wetted_length_change, mode):
         return 0
 
     else:
-        integral_one = integrate.quad(shape_function_wet_bottom, 0, wetted_length, args=(wetted_length, mode))[0]
+        integral_one = integrate.quad(shape_function_wet_bottom, 0,
+                                      wetted_length,
+                                      args=(wetted_length, mode))[0]
 
         value = (density_water * impact_velocity * wetted_length
                  * wetted_length_change * integral_one)
@@ -177,7 +188,8 @@ def matrix_vector_generator(wetted_length, wetted_length_change):
     inverse_mass_matrix = np.linalg.inv(mass_matrix + added_mass_matrix)
 
     matrix = np.array([[zero_matrix, identity_matrix],
-                       [-inverse_mass_matrix.dot(stiffness_matrix), -inverse_mass_matrix.dot(damping_matrix)]])
+                       [-inverse_mass_matrix.dot(stiffness_matrix),
+                        -inverse_mass_matrix.dot(damping_matrix)]])
 
     vector = np.array([zero_vector, -inverse_mass_matrix.dot(force_vector)])
 
@@ -250,8 +262,7 @@ def mode_one_temporal_term(write_file=False):
                                                      n0_wetted_length_change)
 
         # Calculate cx terms for Runge Kutta
-        c1_vector = time_step * matrix_vector_multiplication(matrix_0, vector_0,
-                                                             current_guess)
+        c1_vector = time_step * matrix_vector_multiplication(matrix_0, vector_0, current_guess)
         c2_vector = time_step * matrix_vector_multiplication(matrix_05, vector_05, current_guess + 0.5 * c1_vector)
         c3_vector = time_step * matrix_vector_multiplication(matrix_05, vector_05, current_guess + 0.5 * c2_vector)
         c4_vector = time_step * matrix_vector_multiplication(matrix_1, vector_1, current_guess + c3_vector)
