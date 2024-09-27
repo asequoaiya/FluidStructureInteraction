@@ -4,8 +4,8 @@ import scipy.integrate as integrate
 import math
 
 # ----- Time constants -----
-ending_time = 0.0004935  # [s]
-number_of_steps = 1000  # [-]
+ending_time = 0.01  # [s]
+number_of_steps = 5000  # [-]
 
 # ----- Physical constants -----
 # Plate strip material
@@ -56,7 +56,7 @@ def shape_function_wet_top(x, wetted_length, mode):
 
     return (((-1.0178 * math.cos(beta * x) + math.sin(beta * x)
             + 1.0178 * math.cosh(beta * x) - math.sinh(beta * x)))
-            * ((wetted_length - x) ** 0.5))
+            * ((wetted_length ** 2 - x ** 2) ** 0.5))
 
 
 # Shape function divided by square root term
@@ -65,7 +65,7 @@ def shape_function_wet_bottom(x, wetted_length, mode_m):
 
     return (((-1.0178 * math.cos(beta * x) + math.sin(beta * x)
             + 1.0178 * math.cosh(beta * x) - math.sinh(beta * x)))
-            * ((wetted_length - x) ** -0.5))
+            * ((wetted_length ** 2 - x ** 2) ** -0.5))
 
 
 # ----- Mass equation terms -----
@@ -241,9 +241,9 @@ def mode_one_temporal_term(write_file=False):
         n05_time_point = (n1_time_point + n0_time_point) / 2
 
         # Calculate wetted length at these time points
-        n1_wetted_length = wetted_length_wagner(n1_time_point)
-        n0_wetted_length = wetted_length_wagner(n0_time_point)
-        n05_wetted_length = wetted_length_wagner(n05_time_point)
+        n1_wetted_length = np.minimum(wetted_length_wagner(n1_time_point), plate_length)
+        n0_wetted_length = np.minimum(wetted_length_wagner(n0_time_point), plate_length)
+        n05_wetted_length = np.minimum(wetted_length_wagner(n05_time_point), plate_length)
 
         # Calculate rate of change between time points (simple linear approx)
         n1_wetted_length_change = ((n1_wetted_length - n0_wetted_length)

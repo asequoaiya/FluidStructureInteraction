@@ -4,8 +4,8 @@ import scipy.integrate as integrate
 import math
 
 # ----- Time constants -----
-ending_time = 0.0004935  # [s]
-number_of_steps = 1000  # [-]
+ending_time = 0.01  # [s]
+number_of_steps = 5000  # [-]
 
 # ----- Physical constants -----
 # Plate strip material
@@ -19,7 +19,6 @@ plate_thickness = 0.021  # [m]
 plate_area = plate_thickness  # [m^2]
 moment_of_inertia = ((plate_length * plate_thickness ** 3) / 12
                      / (1 - poisson_ratio ** 2))  # [m^4]
-print(moment_of_inertia)
 
 # Wave
 density_water = 1025  # [kg/m^3]
@@ -43,14 +42,14 @@ def shape_function_one(x, power):
 def shape_function_wet_top(x, wetted_length):
     return (((-1.0178 * math.cos(beta * x) + math.sin(beta * x)
             + 1.0178 * math.cosh(beta * x) - math.sinh(beta * x)))
-            * (wetted_length - x) ** 0.5)
+            * (wetted_length ** 2 - x ** 2) ** 0.5)
 
 
 # Shape function divided by square root term
 def shape_function_wet_bottom(x, wetted_length):
     return (((-1.0178 * math.cos(beta * x) + math.sin(beta * x)
             + 1.0178 * math.cosh(beta * x) - math.sinh(beta * x)))
-            * (wetted_length - x) ** -0.5)
+            * (wetted_length ** 2 - x ** 2) ** -0.5)
 
 
 # ----- Mass equation terms -----
@@ -78,9 +77,9 @@ def added_mass(wetted_length):
         return 0
     else:
         integral_one = integrate.quad(shape_function_wet_top, 0, wetted_length, args=(wetted_length))[0]
-        integral_two = integrate.quad(shape_function_one, 0, wetted_length, args=(wetted_length))[0]
+        integral_two = integrate.quad(shape_function_one, 0, wetted_length, args=(1))[0]
 
-        value = density_water * integral_one + integral_two / wetted_length
+        value = density_water * integral_one * integral_two / wetted_length
 
         return value
 
@@ -91,10 +90,10 @@ def damping(wetted_length, wetted_length_change):
         return 0
     else:
         integral_one = integrate.quad(shape_function_wet_bottom, 0, wetted_length, args=(wetted_length))[0]
-        integral_two = integrate.quad(shape_function_one, 0, wetted_length, args=(wetted_length))[0]
+        integral_two = integrate.quad(shape_function_one, 0, wetted_length, args=(1))[0]
 
         value = (density_water * wetted_length * wetted_length_change * integral_one
-                 + integral_two / wetted_length)
+                 * integral_two / wetted_length)
 
         return value
 
@@ -135,8 +134,7 @@ def matrix_vector_generator(wetted_length, wetted_length_change):
     matrix = np.array([[0, 1],
                        [-inverse_mass_term * k_mm, -inverse_mass_term * d_mm]])
 
-    vector = np.array([[0],
-                       [inverse_mass_term * f_m]])
+    vector = np.array([[0], [inverse_mass_term * f_m]])
 
     return matrix, vector
 
@@ -175,9 +173,9 @@ def mode_one_temporal_term(write_file=False):
         n05_time_point = (n1_time_point + n0_time_point) / 2
 
         # Calculate wetted length at these time points
-        n1_wetted_length = wetted_length_wagner(n1_time_point)
-        n0_wetted_length = wetted_length_wagner(n0_time_point)
-        n05_wetted_length = wetted_length_wagner(n05_time_point)
+        n1_wetted_length = np.minimum(wetted_length_wagner(n1_time_point), plate_length)
+        n0_wetted_length = np.minimum(wetted_length_wagner(n0_time_point), plate_length)
+        n05_wetted_length = np.minimum(wetted_length_wagner(n05_time_point), plate_length)
 
         # Calculate rate of change between time points (simple linear approx)
         n1_wetted_length_change = ((n1_wetted_length - n0_wetted_length)
