@@ -76,10 +76,12 @@ def added_mass(wetted_length):
     if wetted_length == 0:
         return 0
     else:
-        integral_one = integrate.quad(shape_function_wet_top, 0, wetted_length, args=(wetted_length))[0]
-        integral_two = integrate.quad(shape_function_one, 0, wetted_length, args=(1))[0]
+        integral_one = integrate.quad(shape_function_wet_top, 0, wetted_length,
+                                      args=(wetted_length))[0]
+        integral_two = integrate.quad(shape_function_one, 0, wetted_length,
+                                      args=(1))[0]
 
-        value = density_water * integral_one * integral_two / wetted_length
+        value = (density_water * integral_one) * (integral_two / wetted_length)
 
         return value
 
@@ -89,11 +91,16 @@ def damping(wetted_length, wetted_length_change):
     if wetted_length == 0:
         return 0
     else:
-        integral_one = integrate.quad(shape_function_wet_bottom, 0, wetted_length, args=(wetted_length))[0]
-        integral_two = integrate.quad(shape_function_one, 0, wetted_length, args=(1))[0]
+        integral_one = integrate.quad(shape_function_wet_bottom, 0,
+                                      wetted_length,
+                                      args=(wetted_length))[0]
+        integral_two = integrate.quad(shape_function_one, 0,
+                                      wetted_length,
+                                      args=(1))[0]
 
-        value = (density_water * wetted_length * wetted_length_change * integral_one
-                 * integral_two / wetted_length)
+        value = (density_water * wetted_length * wetted_length_change
+                 * integral_one
+                 * (integral_two / wetted_length))
 
         return value
 
@@ -104,7 +111,9 @@ def force(wetted_length, wetted_length_change):
         return 0
 
     else:
-        integral_one = integrate.quad(shape_function_wet_bottom, 0, wetted_length, args=(wetted_length))[0]
+        integral_one = integrate.quad(shape_function_wet_bottom, 0,
+                                      wetted_length,
+                                      args=(wetted_length))[0]
 
         value = (density_water * impact_velocity * wetted_length
                  * wetted_length_change * integral_one)
