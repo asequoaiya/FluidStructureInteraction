@@ -5,7 +5,7 @@ import math
 
 # ----- Time constants -----
 ending_time = 0.01  # [s]
-number_of_steps = 5000  # [-]
+number_of_steps = 1000  # [-]
 
 # ----- Physical constants -----
 # Plate strip material
@@ -191,7 +191,7 @@ def matrix_vector_generator(wetted_length, wetted_length_change):
                        [-inverse_mass_matrix.dot(stiffness_matrix),
                         -inverse_mass_matrix.dot(damping_matrix)]])
 
-    vector = np.array([zero_vector, -inverse_mass_matrix.dot(force_vector)])
+    vector = np.array([zero_vector, inverse_mass_matrix.dot(force_vector)])
 
     return matrix, vector
 
